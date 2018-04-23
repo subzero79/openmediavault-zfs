@@ -47,12 +47,23 @@ class OMVModuleZFSFilesystem extends OMVModuleZFSDataset {
 	}
 
 	public static function getAllFilesystems(){
-		$cmd = "zfs list -H -o name,mountpoint -t filesystem";
+		$cmd = "zfs list -H -o name -t filesystem";
 		OMVModuleZFSUtil::exec($cmd, $out, $res);
 		$filesystems=[];
+		$dockerfilter = \OMV\Environment::get("OMV_ZFS_FILTERDOCKER", $default = "NO");
 		foreach($out as $line) {
-			$tmpary = preg_split('/\t+/', $line);
-			$filesystems[]=new OMVModuleZFSFilesystem($tmpary[0]);
+            switch ($dockerfilter) {
+                case 'YES':
+                    if (!preg_match('/^[a-f0-9]{64}+/', str_replace("/","", strrchr($line, "/" ))) or (!preg_match('/\//',$line)))  {
+                       $filesystems[] = new OMVModuleZFSFilesystem($line);
+                    }
+                    break;        
+                case "NO":
+                	if (!preg_match('/\//',$line)) {
+	                   $filesystems[] = new OMVModuleZFSFilesystem($line);
+                	}
+                    break;
+            }
 		}
 		return $filesystems;
 	}

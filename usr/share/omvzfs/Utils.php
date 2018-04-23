@@ -287,7 +287,17 @@ class OMVModuleZFSUtil {
                     $tmp['lastscrub'] = "n/a";
                     $tmp['state'] = "n/a";
                     $tmp['status'] = "n/a";
-                    array_push($objects,$tmp);
+                    $dockerfilter = \OMV\Environment::get("OMV_ZFS_FILTERDOCKER", $default = "NO");
+                    switch ($dockerfilter) {
+                        case 'YES':
+                            if (!preg_match('/^[a-f0-9]{64}+/', $tmp["name"])) {
+                               array_push($objects,$tmp);
+                            }
+                            break;        
+                        case "NO":
+                            array_push($objects,$tmp);
+                            break;
+                    }
                 }
                 break;
 
@@ -384,8 +394,20 @@ class OMVModuleZFSUtil {
                 'path'=>$path);
             $tmp['used'] = OMVModuleZFSUtil::bytesToSize(OMVModuleZFSUtil::SizeTobytes($used));
             $tmp['refer'] = OMVModuleZFSUtil::bytesToSize(OMVModuleZFSUtil::SizeTobytes($refer));
-            array_push($objects,$tmp);
+            
+            $dockerfilter = \OMV\Environment::get("OMV_ZFS_FILTERDOCKER", $default = "NO");
+            switch ($dockerfilter) {
+                case 'YES':
+                    if (!preg_match('/^[a-f0-9]{64}+/', str_replace("/","", strrchr($tmp['path'], "/" )))) {
+                       array_push($objects,$tmp);
+                    }
+                    break;        
+                case "NO":
+                    array_push($objects,$tmp);
+                    break;
+            }
         }
+        
         return $objects;
     }
 
