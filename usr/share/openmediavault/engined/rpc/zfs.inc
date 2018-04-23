@@ -170,9 +170,20 @@ class OMVRpcServiceZFS extends ServiceAbstract {
     {
         $this->validateMethodContext($context, ['role' => OMV_ROLE_ADMINISTRATOR]);
         $this->validateMethodParams($params, 'rpc.zfs.name');
-
-        $pool = new OMVModuleZFSZpool($params['name']);
-        $pool->export();
+        // Check for shared folder references, fetch only zfs ones
+        $shares=Rpc::call("ShareMgmt","enumerateSharedFolders", [], $context);
+        $shares = array_filter($shares, function($element) {
+            if(!strstr($element["mntent"]["fsname"], "/", TRUE) == $params['name'])
+                return true;
+            else
+                return false;
+        });
+        if (empty($shares)) {
+            $pool = new OMVModuleZFSZpool($params['name']);
+            $pool->export();            
+        } else {
+            throw new OMVModuleZFSException("The pool " . $params['name'] .  " has referenced datasets, so it cannot be exported");   
+        }
     }
 
     public function getObjectTree($params, $context)
